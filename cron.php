@@ -6,7 +6,8 @@ Status - 0:new 1:ok 2:delete 3:update
 
 **************************/
 
-//print_r($_SERVER);
+// print_r($_SERVER); die();
+
 require("configure.php");
 //connect
 $mysqli = new mysqli($db_host, $db_user, $db_password, $db_database);
@@ -19,7 +20,7 @@ if ($mysqli->connect_errno) {
 //print_r($_SERVER);
 
 $res = $mysqli->query("SELECT * FROM vhosts WHERE status<>1");
-$content_original=file_get_contents("/var/www/loc.devtools/vhost_template");
+$content_original=file_get_contents($project_directory."/vhost_template");
 
 $restart = false;
 
