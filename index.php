@@ -48,6 +48,7 @@ echo $row['_msg'];
 // echo "<pre>"; print_r($_POST);
 
 if( isset($_POST['vhost_name']) ){
+
 	if( isset($_POST['item2del']) ){
 		foreach($_POST['item2del'] AS $k => $v){
 			$status = $mysqli->query("SELECT status FROM vhosts WHERE id=".$k)->fetch_object()->status;
@@ -57,13 +58,39 @@ if( isset($_POST['vhost_name']) ){
 				$mysqli->query("UPDATE vhosts SET status=1 WHERE id=".$k);
 			}
 		}
-	}	
+	}
+	
 	if( isset($_POST['vhost_name']) ){
 		$res = $mysqli->query("SELECT * FROM vhosts");
 		while($row = $res->fetch_object()){
 			// echo "\n<br>".$row->id.": ".$_POST['vhost_name'][$row->id]." => ".$row->vhost_name;
 			if($_POST['vhost_name'][$row->id]!=$row->vhost_name || $_POST['server_path'][$row->id]!=$row->server_path){
 				$mysqli->query("UPDATE vhosts SET status=3, server_path='".$_POST['server_path'][$row->id]."', vhost_name='".$_POST['vhost_name'][$row->id]."' WHERE id=".$row->id);
+			}
+		}
+	}	
+	if( isset($_POST['apply56php']) ){
+		$res = $mysqli->query("SELECT * FROM vhosts");
+		while($row = $res->fetch_object()){
+
+			if( isset($_POST['apply56php'][$row->id])){ // we have that item in a records
+				$htfile=$row->server_path.='/.htaccess';
+				// echo $htfile." = ";
+				$content = file_get_contents('php5.6-fpm.conf');
+
+				if( is_file($htfile) ){
+					$content2 = file_get_contents($htfile);
+					// htfile already there
+					if(strpos($content2,'php5.6-fpm')===false){
+						file_put_contents($htfile, $content.$content2.PHP_EOL);
+					}
+				}else{
+					// new created
+					//file_put_contents($htfile, $content.PHP_EOL , FILE_APPEND | LOCK_EX);
+					$handle = fopen($htfile, 'w') or die('Cannot open file:  '.$htfile);
+					fwrite($handle, $content);
+					
+				}
 			}
 		}
 	}
@@ -73,29 +100,57 @@ if( isset($_POST['vhost_name']) ){
 }
 
 
-
+// ******************************
+// step1: first page
 if(!isset($_POST['step'])){
-	// step1: first page
+
 	
 //print_r($_SERVER);
 
 	$res = $mysqli->query("SELECT * FROM vhosts");
 	$out_current='';
+	
+	
+	//*****************************
+	// normal page
+	//*****************************
 	if(!isset($_GET['edit'])){
-		// normal page
+		
 	
 		while($row = $res->fetch_object()){
 			$out_current .=  $_SERVER['SERVER_ADDR']."	".$row->vhost_name."	#path:".$row->server_path."\n";
 		}
 		echo "Current /windows/system32/drivers/hosts<br><textarea style=\"width:600px;height:80px\">".$out_current."</textarea>";
+		
+		
+		
+		
+	//*****************************
+	// "editing" page
+	//*****************************
 	}else{
-		// "editing" page
-	
+		
+		$out_current = '<table><tr>
+			<th>Delete</th>
+			<th>Status</th>
+			<th>Name</th>
+			<th>Path</th>
+			<th>Apply php 5.6</th>
+				</tr>';
 		while($row = $res->fetch_object()){
 			//$status=$res->status;
-			$out_current .=  "\n".'<li>Delete:<input type="checkbox" name="item2del['.$row->id.']" value="1" /> ['.$row->status.'] - <input name="vhost_name['.$row->id.']" size="32" value="'.$row->vhost_name.'">	
-			Path: <input name="server_path['.$row->id.']" size="60" value="'.$row->server_path.'">'."\n";
+
+			
+			$out_current .= '<tr>
+				<td><input type="checkbox" name="item2del['.$row->id.']" value="1" /></td>
+				<td>'.$row->status.'</td>
+				<td><input name="vhost_name['.$row->id.']" size="32" value="'.$row->vhost_name.'"></td>
+				<td><input name="server_path['.$row->id.']" size="60" value="'.$row->server_path.'"></td>
+				<td><input type="checkbox" name="apply56php['.$row->id.']" value="1" /></td>
+					</tr>';
 		}
+		$out_current.='</table>';
+		
 		echo '<form method="post">Host to edit: <br><ol>'.$out_current.'</ol><input type="submit" value=":: update ::"></form>';
 	
 	}
@@ -105,10 +160,9 @@ if(!isset($_POST['step'])){
 	<form method="post">
 	<input type="hidden" name="step" value="2" />
 	<label>VHost Name <input type="text" name="vhost_name1" size="48" value="loc.test1"/></label><br/>
-	<label>Server Path <input type="text" name="server_path1" size="48" value="/var/www/http/loc.test1"/></label>
+	<label>Server Path <input type="text" name="server_path1" size="48" value="/var/www/html/loc.test1"/></label>
 	<hr/>
-	<sup>in www, accesses via samba share use: /var/www/%sitename%</sup><br/>
-	<sup>in c:/!CODE/http, accesses host filesystem use: /var/www/http/%sitename%</sup>
+	<sup>in www, accesses via samba share use: /var/www/html/%sitename%</sup><br/>
 	<hr/>
 	<input type="submit" value="Create New VHost!"/>
 	
